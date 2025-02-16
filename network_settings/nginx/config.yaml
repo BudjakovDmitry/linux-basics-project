@@ -5,6 +5,10 @@ network:
     enp1s0:
       addresses:
       - "192.168.122.110/24"
+      nameservers:
+        addresses:
+        - 8.8.8.8
       routes:
       - to: "default"
         via: "192.168.122.1"
+
