@@ -2,11 +2,6 @@
 
 Инфраструктура:
 
-* Cервер с Nginx
-* Сервер backend.01 (Gunicorn, Django app)
-* Сервер backend.02 (Gunicorn, Django app)
-* БД source (MySQL)
-* БД replica (MySQL)
 * Сервер мониторинга (Prometeus, Grafana)
 * Сервер логирования (Elastic search, Kibana)
 * Сервер сбора бэкапа
@@ -31,15 +26,30 @@ database.replica | 192.168.155.105
 apt install -y postgresql postgresql-contrib
 ```
 
-
-2. Создаем пользователя для репликации
+2. Создаем базу
 
 ```
 sudo -i -u postgres
-createuser --replication -P replication_user
+createdb todos
 ```
 
+3. Задать пароль для postgres
+
+```
+sudo -i -u postgres
+psql
+ALTER USER postgres WITH password 'postgres';
+```
+
+
 3. Настройка PostgreSQL
+
+В файл `/etc/postgresql/14/main/postgresql.conf` внести изменения:
+
+```
+listen_addresses = '*'
+wal_level = logical
+```
 
 Добавить в `/etc/postgresql/14/main/pg_hba.conf`:
 
@@ -50,14 +60,7 @@ host    all             all             192.168.122.103/32      scram-sha-256
 host    all             all             192.168.0.103/32        scram-sha-256
 # Allow replication connections from remote hosts, by a user with the
 # replication privileges.
-host    replication_user  all           192.168.122.105/32      scram-sha-256
-```
-
-В файл `/etc/postgresql/14/main/postgresql.conf` внести изменения:
-
-```
-listen_addresses = '*'
-wal_level = logical
+host    todos           postgres        192.168.122.105/32      trust
 ```
 
 Перезупусстить PostgreSQL
@@ -66,12 +69,12 @@ wal_level = logical
 systemctl restart postgresql
 ```
 
-Создаем базу данных
+На стороне source сервера создать публикацию
 
 ```
-su -i -u postgres
+sudo -i -u postgres
 psql
-CREATE DATABASE polls;
+CREATE PUBLICATION db_pub FOR ALL TABLES;
 ```
 
 ## Настройка сервера БД (replica)
@@ -90,25 +93,25 @@ apt install -y postgresql postgresql-contrib
 listen_addresses = '*'
 ```
 
-
 Перезупусстить PostgreSQL
 
 ```
 systemctl restart postgresql
 ```
 
-## Настройка публикации и подписки
-
-На стороне source сервера создать публикацию
-
-```
-CREATE PUBLICATION db_pub FOR ALL TABLES;
-```
-
 На стороне реплики создать подписку
 
 ```
-CREATE SUBSCRIPTION db_sub CONNECTION 'host=192.168.122.104 dbname=polls' PUBLICATION db_pub;
+sudo -i -u postgres
+psql
+CREATE SUBSCRIPTION db_sub CONNECTION 'host=192.168.122.104 dbname=todos' PUBLICATION db_pub;
+```
+
+Сделать дамп базы с мастера
+
+```
+sudo -i -u postgres
+pg_dump --dbname todos --host 192.168.122.104 --no-password --create --schema-only | psql
 ```
 
 ## Backend 1
