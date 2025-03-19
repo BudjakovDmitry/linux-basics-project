@@ -18,7 +18,7 @@ backend.02       | 192.168.122.103
 database.source  | 192.168.122.104
 database.replica | 192.168.155.105
 
-## Подготовка сервера БД (Source)
+## Подготовка сервера БД (Primary)
 
 1. Установка PostgreSQL
 
@@ -26,14 +26,8 @@ database.replica | 192.168.155.105
 apt install -y postgresql postgresql-contrib
 ```
 
-2. Создаем базу
 
-```
-sudo -i -u postgres
-createdb todos
-```
-
-3. Задать пароль для postgres
+2. Задать пароль для postgres
 
 ```
 sudo -i -u postgres
@@ -41,43 +35,36 @@ psql
 ALTER USER postgres WITH password 'postgres';
 ```
 
+3. Настройка
 
-3. Настройка PostgreSQL
-
-В файл `/etc/postgresql/14/main/postgresql.conf` внести изменения:
+В файле `/etc/postgresql/14/main/postgresql.conf` указываем параметры
 
 ```
 listen_addresses = '*'
-wal_level = logical
+wal_level = replica
+max_wal_senders = 10
+wal_keep_size = 1024MB
 ```
 
-Добавить в `/etc/postgresql/14/main/pg_hba.conf`:
+В файл `/etc/postgresql/14/main/pg_hba.conf` добавляем строчку
 
 ```
-# IPv4 remote connections
-host    all             all             192.168.122.102/32      scram-sha-256
-host    all             all             192.168.122.103/32      scram-sha-256
-host    all             all             192.168.0.103/32        scram-sha-256
-# Allow replication connections from remote hosts, by a user with the
-# replication privileges.
-host    todos           postgres        192.168.122.105/32      trust
+host replication replicator 192.168.122.105/24 md5
 ```
 
-Перезупусстить PostgreSQL
+Перезапускаем Postgres
 
 ```
 systemctl restart postgresql
 ```
 
-На стороне source сервера создать публикацию
+4. Создаем пользователя для репликации
 
 ```
-sudo -i -u postgres
-psql
-CREATE PUBLICATION db_pub FOR ALL TABLES;
+psql -U postgres -h localhost -c "CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD 'replicator';"
 ```
 
-## Настройка сервера БД (replica)
+## Настройка сервера БД (Standby Node)
 
 1. Установка PostgreSQL
 
@@ -87,31 +74,48 @@ apt install -y postgresql postgresql-contrib
 
 2. Настройка PostgreSQL
 
+Остановить Postgres
+
+```
+systemctl stop postgresql
+```
+
+Очищаем директорию с данными
+
+```
+rm -rf /var/lib/postgresql/14/main/*
+```
+
+Выгружаем в эту директорию бэкап из основного сервера
+
+```
+pg_basebackup -h 192.168.122.104 -U replicator -D /var/lib/postgresql/14/main -Fp -Xs -P
+```
+
+Создаем standby.signal
+
+```
+touch /var/lib/postgresql/14/main/standby.signal
+```
+
+Меняем владельца
+
+```
+chown postgres:postgres /var/lib/postgresql/14/main/* -R
+```
+
 В файле `/etc/postgresql/14/main/postgresql.conf` указать:
 
 ```
 listen_addresses = '*'
+primary_conninfo = 'host=192.168.122.104 port=5432 user=replicator password=replicator'
+hot_standby = on
 ```
 
-Перезупусстить PostgreSQL
+Запусстить PostgreSQL
 
 ```
-systemctl restart postgresql
-```
-
-На стороне реплики создать подписку
-
-```
-sudo -i -u postgres
-psql
-CREATE SUBSCRIPTION db_sub CONNECTION 'host=192.168.122.104 dbname=todos' PUBLICATION db_pub;
-```
-
-Сделать дамп базы с мастера
-
-```
-sudo -i -u postgres
-pg_dump --dbname todos --host 192.168.122.104 --no-password --create --schema-only | psql
+systemctl start postgresql
 ```
 
 ## Backend 1
