@@ -26,7 +26,6 @@ database.replica | 192.168.155.105
 apt install -y postgresql postgresql-contrib
 ```
 
-
 2. Задать пароль для postgres
 
 ```
@@ -66,13 +65,13 @@ psql -U postgres -h localhost -c "CREATE ROLE replicator WITH REPLICATION LOGIN 
 
 ## Настройка сервера БД (Standby Node)
 
-1. Установка PostgreSQL
+1. Установка Postgresql
 
 ```
 apt install -y postgresql postgresql-contrib
 ```
 
-2. Настройка PostgreSQL
+2. Настройка Postgresql
 
 Остановить Postgres
 
@@ -112,19 +111,59 @@ primary_conninfo = 'host=192.168.122.104 port=5432 user=replicator password=repl
 hot_standby = on
 ```
 
-Запусстить PostgreSQL
+Запустить Postgresql
 
 ```
 systemctl start postgresql
 ```
 
-## Backend 1
+## Backends
 
-Для установки mysqlclient
-sudo apt-get install python3-dev default-libmysqlclient-dev build-essential pkg-config
+1. Устанавливаем Docker
 
-sudo apt install python3-pip
-sudo python3 -m pip install Django
+```shell
+apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+# apt-cache policy docker-ce
+apt install -y docker-ce
+```
+
+2. Скачиваем образ приложения и запускаем
+
+```shell
+docker pull dmitrybudyakov/otus-linux-basic:latest
+docker run -p 8000:8000 -d dmitrybudyakov/otus-linux-basic
+```
+
+## Nginx
+
+Установка Nginx
+
+```shell
+sudo apt install -y curl gnupg2 ca-certificates lsb-release ubuntu-keyring
+
+curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor \
+    | tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+
+gpg --dry-run --quiet --no-keyring --import --import-options import-show /usr/share/keyrings/nginx-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+http://nginx.org/packages/ubuntu `lsb_release -cs` nginx" \
+    | tee /etc/apt/sources.list.d/nginx.list
+
+echo -e "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" \
+    | tee /etc/apt/preferences.d/99nginx
+
+apt update
+apt install -y nginx
+```
+
+Запуск Nginx
+
+```shell
+systemctl start nginx
+```
 
 # Что бэкапить
 
