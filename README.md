@@ -2,21 +2,15 @@
 
 Инфраструктура:
 
-* Сервер мониторинга (Prometeus, Grafana)
-* Сервер логирования (Elastic search, Kibana)
-* Сервер сбора бэкапа
-
-Бэкап БД снимается со слейва.
-
-Конфигурация сети:
-
-Service          | ip
------------------|----------------
-nginx            | 192.168.122.101
-backend.01       | 192.168.122.102
-backend.02       | 192.168.122.103
-database.source  | 192.168.122.104
-database.replica | 192.168.155.105
+Service              | ip
+---------------------|----------------
+nginx                | 192.168.122.101
+backend.01           | 192.168.122.102
+backend.02           | 192.168.122.103
+database.source      | 192.168.122.104
+database.replica     | 192.168.122.105
+Monitoring & Logging | 192.168.122.106
+Backup               | 192.168.122.110
 
 ## Подготовка сервера БД (Primary)
 
@@ -165,9 +159,50 @@ apt install -y nginx
 systemctl start nginx
 ```
 
+Установка Prometheus node exporter
+
+```shell
+apt install -y prometheus-node-exporter
+```
+
+## Prometheus & Grafana
+
+### Prometheus
+
+```shell
+apt install -y prometheus
+```
+
+После обновления конфигурации перезапустить сервер Prometheus
+
+```
+systemctl restart prometheus
+```
+
+### Grafana
+
+```shell
+apt install -y musl
+dpkg -i grafana-enterprise_11.4.0_amd64.deb
+```
+
 # Что бэкапить
 
-### Database (Source)
+### Database
 
+```
 /etc/postgresql/14/main/pg_hba.conf
 /etc/postgresql/14/main/postgresql.conf
+```
+
+### Nginx
+
+```
+/etc/nginx/conf.d/default.conf
+```
+
+### Monitoring
+
+```
+/etc/prometheus/prometheus.yml
+```
