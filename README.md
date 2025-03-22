@@ -206,3 +206,28 @@ dpkg -i grafana-enterprise_11.4.0_amd64.deb
 ```
 /etc/prometheus/prometheus.yml
 ```
+
+## Инструкция по проведению аварийного восстановления
+
+### Nginx
+
+Зайти на сервер Gateway
+
+```
+ssh user@192.168.122.101
+```
+
+Скачать скрипт восстановления
+
+```
+git clone https://github.com/BudjakovDmitry/linux-basics-project.git restore
+cd restore/
+```
+
+Добавить права на выполнение и запустить скрипт восстановления
+
+```
+sudo su
+chmod u+x gateway.sh
+./gateway.sh
+```
