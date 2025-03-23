@@ -232,7 +232,7 @@ chmod u+x gateway.sh
 ./gateway.sh
 ```
 
-### Backend.01, Backend.02
+### Backend
 
 Зайти на сервер бэкенда
 
@@ -251,7 +251,7 @@ cd restore/
 
 ```
 sudo su
-chmod u+x gateway.sh
+chmod u+x backend.sh
 ./gateway.sh
 ```
 
