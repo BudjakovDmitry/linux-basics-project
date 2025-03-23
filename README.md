@@ -231,3 +231,28 @@ sudo su
 chmod u+x gateway.sh
 ./gateway.sh
 ```
+
+### Backend.01, Backend.02
+
+Зайти на сервер бэкенда
+
+```
+ssh user@192.168.122.102
+```
+
+Скачать скрипт восстановления
+
+```
+git clone https://github.com/BudjakovDmitry/linux-basics-project.git restore
+cd restore/
+```
+
+Добавить права на выполнение и запустить скрипт восстановления
+
+```
+sudo su
+chmod u+x gateway.sh
+./gateway.sh
+```
+
+Повторить для каждого инстанса бэкенда.
